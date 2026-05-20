@@ -37,7 +37,7 @@ const SEVERITY_COLORS = {
 };
 
 function ScoreBar({ score }) {
-  const pct = Math.max(0, Math.min(100, ((score + 1) / 2) * 100));
+  const pct = Math.abs(score) * 100;
   const color =
     score > 0.2 ? "bg-emerald-500" : score < -0.2 ? "bg-red-400" : "bg-slate-300";
   return (
@@ -116,14 +116,28 @@ export default function AnalyticsDashboard() {
   const maxCount = Math.max(...aspectFrequency.map((a) => a.count), 1);
 
   const aspects = analytics?.aspects || [];
-  const positiveAspects = [...aspects]
-    .filter((a) => a.score > 0.1)
-    .filter((a, index, self) => index === self.findIndex((b) => b.name === a.name))
-    .sort((a, b) => b.score - a.score);
+
+  const seen = new Set();
   const negativeAspects = [...aspects]
-    .filter((a) => a.score < 0)
-    .filter((a, index, self) => index === self.findIndex((b) => b.name === a.name))
+    .filter((a) => a.score < -0.2)
+    .filter((a) => {
+      const normalized = a.name.toLowerCase().replace(/[\s_&]/g, "");
+      if (seen.has(normalized)) return false;
+      seen.add(normalized);
+      return true;
+    })
     .sort((a, b) => a.score - b.score);
+
+  const seenPos = new Set();
+  const positiveAspects = [...aspects]
+    .filter((a) => a.score > 0.2)
+    .filter((a) => {
+      const normalized = a.name.toLowerCase().replace(/[\s_&]/g, "");
+      if (seenPos.has(normalized)) return false;
+      seenPos.add(normalized);
+      return true;
+    })
+    .sort((a, b) => b.score - a.score);
 
   const negativeSignals = analytics?.negative_signals?.signals || [];
   const positiveSignals = analytics?.positive_drivers?.signals || [];
@@ -144,14 +158,16 @@ export default function AnalyticsDashboard() {
       sub: null,
     },
     {
-      label: "Sentiment volatility",
-      value: analytics?.sentiment_volatility?.volatility?.toFixed(2) ?? "—",
-      sub: analytics?.sentiment_volatility?.stability ?? null,
+      label: "Sentiment stability",
+      value: analytics?.sentiment_volatility?.stability
+        ? analytics.sentiment_volatility.stability.replace(/_/g, " ")
+        : "—",
+      sub: `Score: ${analytics?.sentiment_volatility?.volatility?.toFixed(2) ?? "—"}`,
     },
     {
       label: "Campus Academic Index",
-      value: analytics?.academic_health_index?.score?.toFixed(2) ?? "—",
-      sub: analytics?.academic_health_index?.label ?? null,
+      value: analytics?.academic_health_index?.label ?? "—",
+      sub: `Score: ${analytics?.academic_health_index?.score?.toFixed(2) ?? "—"}`,
     },
   ];
 

@@ -63,17 +63,30 @@ async def get_analytics(
         aspects=aspect_summary,
     )
 
+    ASPECT_NAME_MAP_REVERSE = {
+        "Academic Stress": "academic_stress",
+        "Administration": "administration",
+        "Campus Facilities": "facilities",
+        "Faculty Behavior": "faculty_behavior",
+        "Student Politics": "student_politics",
+        "Student Mental Health": "mental_health",
+        "Tuition & Costs": "cost",
+        "Transit & Services": "services_transit",
+    }
+
     aspects = [
         {
             "name": aspect_name,
             "score": aspect_data["avg_score"],
             "label": aspect_data["label"],
-            "trend": aspect_trends["trends"]
-            .get(aspect_name, {})
-            .get("trend", "stable"),
-            "change": aspect_trends["trends"]
-            .get(aspect_name, {})
-            .get("change", 0),
+            "trend": (
+                aspect_trends["trends"].get(aspect_name, {}) or
+                aspect_trends["trends"].get(ASPECT_NAME_MAP_REVERSE.get(aspect_name, aspect_name), {})
+            ).get("trend", "stable"),
+            "change": (
+                aspect_trends["trends"].get(aspect_name, {}) or
+                aspect_trends["trends"].get(ASPECT_NAME_MAP_REVERSE.get(aspect_name, aspect_name), {})
+            ).get("change", 0),
         }
         for aspect_name, aspect_data in aspect_summary["summary"].items()
     ]

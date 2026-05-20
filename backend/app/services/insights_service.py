@@ -101,8 +101,8 @@ def get_primary_risk_driver(aspect_summary, aspect_trends, review_count):
         trend_score = trend_map.get(trend_label, 0)
 
         raw_score = (
-            negativity_score * 0.70 +
-            trend_score * 0.30
+            negativity_score * 0.90 +
+            trend_score * 0.10
         ) * 100
 
         adjusted_score = raw_score * confidence_factor
@@ -137,125 +137,100 @@ def get_negative_signals(
     sentiment_volatility: dict,
     event_detection: dict
 ):
-    """ 
-    Identifies the top signals indicating potential issues. 
-    Signals include:
-    - Aspect-level negativity and declining trends
-    - Overall vibe decline
-    - High volatility in sentiment
-    """
-    SEVERITY_ORDER = {
-        "high": 0,
-        "medium": 1,
-        "low": 2
-    }
+    SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
     if not aspect_summary:
         return {
             "status": "no_data",
             "signals": [],
             "pattern": "Not enough review data yet to identify recurring issues.",
-            "meta": reliability(
-                sample_size=0,
-                minimum=MIN_NEGATIVE_SIGNAL_POINTS
-            )
+            "meta": reliability(sample_size=0, minimum=MIN_NEGATIVE_SIGNAL_POINTS)
         }
 
     signals = []
     negative_aspects = []
 
-    # Aspect-level risks 
     for aspect, data in aspect_summary.items():
-        label = data.get("label")
+        avg = data.get("avg_score", 0)
         trend = aspect_trends.get(aspect, {}).get("trend", "stable")
 
-        if label is None:
-            avg = data.get("avg_score", 0.5)
-            label = "negative" if avg < 0.4 else "neutral"
+        # Use -0.2 threshold on -1 to 1 scale for clearly negative
+        is_negative = avg < -0.2
 
-        if label == "negative":
-            negative_aspects.append(aspect)
+        if is_negative:
+            negative_aspects.append((aspect, avg))
 
             if trend == "declining":
                 signals.append({
-                    "text": f"Negative sentiment regarding {aspect.title()} has increased recently.",
+                    "text": f"Negative sentiment regarding {aspect} has increased recently.",
                     "severity": "high"
+                })
+            elif avg < -0.8:
+                signals.append({
+                    "text": f"{aspect} is critically negative and needs immediate attention.",
+                    "severity": "high"
+                })
+            elif avg < -0.5:
+                signals.append({
+                    "text": f"{aspect} is a significant area of concern for students.",
+                    "severity": "medium"
                 })
             else:
                 signals.append({
-                    "text": f"{aspect.title()} is a primary area of concern for students.",
-                    "severity": "medium"
+                    "text": f"{aspect} is a primary area of concern for students.",
+                    "severity": "low"
                 })
 
-    # Overall vibe decline
     if vibe_trend.get("trend") == "declining":
         signals.append({
             "text": "Overall campus sentiment is declining",
             "severity": "high"
         })
 
-    # High volatility in sentiment
     if sentiment_volatility.get("stability") == "unstable":
         signals.append({
-            "text": "Student feedback is flunctuating over time",
+            "text": "Student feedback is fluctuating over time",
             "severity": "medium"
         })
 
-    # Event detection signals (e.g., sudden spikes in negative sentiment)
     event_type = event_detection.get("event_type")
-
-    # "true_event" indicates a significant, sustained change in customer experience that is unlikely to be noise.
     if event_type == "true_event":
         signals.append({
             "text": "Significant change in campus sentiment detected",
             "severity": "high"
         })
-
-    # "sentiment_only_spike" indicates a sudden surge in sentiment (positive or negative) 
-    # without a clear trend, which can be an early warning signal of emerging issues or improvements. 
-    # We flag it as low severity because it's a single data point and may not indicate a sustained pattern yet.
     elif event_type == "sentiment_only_spike":
         signals.append({
             "text": "Short-term surge in student sentiment detected",
             "severity": "low"
         })
 
-    # Deduplicate signals (e.g., multiple aspects declining may generate similar signals)
-    # Keep unique signals and prioritize by severity, then limit to top 4 for clarity in reporting.
     seen = set()
     unique_signals = []
-
     for s in signals:
         if s["text"] not in seen:
             unique_signals.append(s)
             seen.add(s["text"])
 
-    unique_signals.sort(
-        key=lambda s: SEVERITY_ORDER.get(s["severity"], 99)
-    )
-
+    unique_signals.sort(key=lambda s: SEVERITY_ORDER.get(s["severity"], 99))
     unique_signals = unique_signals[:4]
 
-    # Business-friendly pattern generation (e.g., "Main concerns are related to X and Y")
     if negative_aspects:
-        pattern = f"Main concerns are related to {', '.join(negative_aspects[:2])}."
+        # Sort by avg_score ascending — worst first
+        sorted_negatives = sorted(negative_aspects, key=lambda x: x[1])
+        top_two = [a[0] for a in sorted_negatives[:2]]
+        pattern = f"Main concerns are related to {', '.join(top_two)}."
     else:
         pattern = "No clear issue pattern detected yet."
 
-    total_mentions = sum(
-        a.get("count", 0) for a in aspect_summary.values()
-    )
+    total_mentions = sum(a.get("count", 0) for a in aspect_summary.values())
 
     return {
         "status": "computed",
         "signals": unique_signals,
         "pattern": pattern,
-        "meta": reliability(
-            sample_size=total_mentions,
-            minimum=MIN_NEGATIVE_SIGNAL_POINTS
-        )
+        "meta": reliability(sample_size=total_mentions, minimum=MIN_NEGATIVE_SIGNAL_POINTS)
     }
-
 
 def get_positive_drivers(
     aspect_summary: dict,

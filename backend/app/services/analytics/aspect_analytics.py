@@ -15,15 +15,24 @@ from backend.app.models.confession import Confession
 
 from backend.app.services.analytics.helpers import reliability
 
+ASPECT_NAME_MAP = {
+    "academic_stress": "Academic Stress",
+    "administration": "Administration",
+    "facilities": "Campus Facilities",
+    "faculty_behavior": "Faculty Behavior",
+    "student_politics": "Student Politics",
+    "mental_health": "Student Mental Health",
+    "cost": "Tuition & Costs",
+    "services_transit": "Transit & Services",
+}
+
 async def get_aspect_summary(db: AsyncSession):
-    # business_id removed — institution-wide
     stmt = (
         select(
             AspectSentiment.aspect,
             func.avg(AspectSentiment.sentiment_score).label("avg_score"),
             func.count(AspectSentiment.id).label("count"),
         )
-        # No join needed — AspectSentiment already has confession_id
         .group_by(AspectSentiment.aspect)
     )
 
@@ -39,7 +48,6 @@ async def get_aspect_summary(db: AsyncSession):
     summary = {}
     total_mentions = 0
 
-    # Determine sentiment label based on average score and predefined thresholds, and accumulate total mentions for reliability calculation
     for row in rows:
         avg = float(row.avg_score)
         count = int(row.count)
@@ -51,11 +59,30 @@ async def get_aspect_summary(db: AsyncSession):
             else "neutral"
         )
 
-        summary[row.aspect] = {
-            "avg_score": avg,
-            "count": count,
-            "label": label
-        }
+        # Normalize aspect name — map snake_case to display name
+        normalized_name = ASPECT_NAME_MAP.get(row.aspect, row.aspect)
+
+        # If this aspect already exists (duplicate from old data), merge by averaging
+        if normalized_name in summary:
+            existing = summary[normalized_name]
+            merged_count = existing["count"] + count
+            merged_avg = (existing["avg_score"] * existing["count"] + avg * count) / merged_count
+            merged_label = (
+                "positive" if merged_avg > ABSA_POSITIVE_THRESHOLD
+                else "negative" if merged_avg < ABSA_NEGATIVE_THRESHOLD
+                else "neutral"
+            )
+            summary[normalized_name] = {
+                "avg_score": merged_avg,
+                "count": merged_count,
+                "label": merged_label
+            }
+        else:
+            summary[normalized_name] = {
+                "avg_score": avg,
+                "count": count,
+                "label": label
+            }
 
     return {
         "summary": summary,
@@ -150,36 +177,17 @@ async def get_aspect_trends(db: AsyncSession):
 
 
 async def get_aspect_frequency(db: AsyncSession, aspects: dict):
-    """
-    Builds a frequent aspect mining payload using the existing aspect summary.
-    """
     aspect_summary = aspects.get("summary", {}) if isinstance(aspects, dict) else {}
-    
-    # 1. Create a bridge map: Map your NEW keys to the OLD database keys
-    # Add all your new keys here and point them to their old database snake_case equivalent
-    KEY_BRIDGE = {
-        "Academic Stress": "academic_stress",
-        "Faculty Behavior": "faculty_behavior",
-        "Administration": "administration",
-        "Campus Facilities": "facilities",
-        "Student Politics": "student_politics",
-        "Student Mental Health": "mental_health",
-        "Tuition & Costs": "cost",
-        "Transit & Services": "services_transit",
-    }
 
     total_mentions = 0
     frequent_aspects = []
 
     for aspect_name in ASPECTS.keys():
-        # 2. Get the database key equivalent (default to the current name if not in map)
-        db_key = KEY_BRIDGE.get(aspect_name, aspect_name)
-        
-        # 3. Pull the count using the correct key
-        count = int(aspect_summary.get(db_key, {}).get("count", 0))
-        
+        # Now summary uses display names directly, so look up by aspect_name
+        count = int(aspect_summary.get(aspect_name, {}).get("count", 0))
+
         frequent_aspects.append({
-            "term": aspect_name, # This is the nice human-readable one for the UI
+            "term": aspect_name,
             "count": count
         })
         total_mentions += count
