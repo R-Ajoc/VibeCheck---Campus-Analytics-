@@ -79,3 +79,12 @@ export const deleteReview = async (reviewId) => {
     },
   });
 };
+
+export const getSentimentTimeline = async (groupBy = "month") => {
+  const token = localStorage.getItem("token");
+  const response = await axios.get(`/api/analytics/timeline`, {
+    params: { group_by: groupBy },
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};

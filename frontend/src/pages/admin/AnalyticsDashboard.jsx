@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAnalytics } from "../../services/api";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { getAnalytics, getSentimentTimeline } from "../../services/api";
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+} from "recharts";
 
 const ASPECT_LABELS = {
   academic_stress: "Academic Stress",
@@ -12,8 +15,6 @@ const ASPECT_LABELS = {
   mental_health: "Student Mental Health",
   cost: "Tuition & Costs",
   services_transit: "Transit & Services",
-  
-  // Keep your old ones as safety fallbacks just in case
   faculty: "Faculty & Professors",
   workload: "Workload Management",
   scheduling: "Exam & Class Scheduling",
@@ -54,18 +55,14 @@ function SentimentBadge({ score }) {
 
 function AspectBar({ term, count, maxCount }) {
   const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
-  
-  // 1. Create a "friendly" label by removing underscores and capitalizing words
   const friendlyLabel = String(term)
-    .replace(/_/g, " ") // replace _ with space
+    .replace(/_/g, " ")
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-
   return (
     <div className="flex items-center gap-3">
       <span className="w-40 text-xs text-slate-600 truncate shrink-0">
-        {/* It will try to use your dictionary, but if it fails, it uses the auto-formatted label */}
         {ASPECT_LABELS[String(term).toLowerCase()] || friendlyLabel}
       </span>
       <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -80,6 +77,9 @@ export default function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [groupBy, setGroupBy] = useState("month");
+  const [timelineLoading, setTimelineLoading] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -97,15 +97,32 @@ export default function AnalyticsDashboard() {
     fetch();
   }, []);
 
+  useEffect(() => {
+    const fetchTimeline = async () => {
+      setTimelineLoading(true);
+      try {
+        const data = await getSentimentTimeline(groupBy);
+        setTimeline(data.timeline || []);
+      } catch {
+        setTimeline([]);
+      } finally {
+        setTimelineLoading(false);
+      }
+    };
+    fetchTimeline();
+  }, [groupBy]);
+
   const aspectFrequency = analytics?.aspect_frequency?.aspects || [];
   const maxCount = Math.max(...aspectFrequency.map((a) => a.count), 1);
 
   const aspects = analytics?.aspects || [];
   const positiveAspects = [...aspects]
     .filter((a) => a.score > 0.1)
+    .filter((a, index, self) => index === self.findIndex((b) => b.name === a.name))
     .sort((a, b) => b.score - a.score);
   const negativeAspects = [...aspects]
     .filter((a) => a.score < 0)
+    .filter((a, index, self) => index === self.findIndex((b) => b.name === a.name))
     .sort((a, b) => a.score - b.score);
 
   const negativeSignals = analytics?.negative_signals?.signals || [];
@@ -170,7 +187,7 @@ export default function AnalyticsDashboard() {
           </div>
         ) : (
           <>
-            {/* KPI Cards (Optimized layout Grid to 3 Columns) */}
+            {/* KPI Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {metrics.map((m) => (
                 <div key={m.label} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -181,10 +198,88 @@ export default function AnalyticsDashboard() {
               ))}
             </div>
 
+            {/* Sentiment Timeline Chart */}
+            <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Sentiment over time</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Positive vs negative confession counts grouped by {groupBy}
+                  </p>
+                </div>
+                <div className="flex rounded-full border border-slate-200 overflow-hidden text-sm font-medium">
+                  <button
+                    onClick={() => setGroupBy("month")}
+                    className={`px-4 py-1.5 transition ${
+                      groupBy === "month"
+                        ? "bg-[#004687] text-white"
+                        : "bg-white text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    Month
+                  </button>
+                  <button
+                    onClick={() => setGroupBy("year")}
+                    className={`px-4 py-1.5 transition ${
+                      groupBy === "year"
+                        ? "bg-[#004687] text-white"
+                        : "bg-white text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    Year
+                  </button>
+                </div>
+              </div>
+
+              {timelineLoading ? (
+                <p className="text-sm text-slate-400 text-center py-10">Loading timeline...</p>
+              ) : timeline.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="period"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: "12px", borderColor: "#e2e8f0", fontSize: "12px" }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
+                    <Line
+                      type="monotone"
+                      dataKey="positive"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: "#10b981" }}
+                      activeDot={{ r: 6 }}
+                      name="Positive"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="negative"
+                      stroke="#f87171"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: "#f87171" }}
+                      activeDot={{ r: 6 }}
+                      name="Negative"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-10">No timeline data available.</p>
+              )}
+            </div>
+
             {/* Positive & Negative split */}
             <div className="grid gap-4 lg:grid-cols-2">
-
-              {/* Positive drivers */}
               <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
@@ -229,7 +324,6 @@ export default function AnalyticsDashboard() {
                 )}
               </div>
 
-              {/* Negative signals */}
               <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
@@ -286,7 +380,6 @@ export default function AnalyticsDashboard() {
               <p className="text-xs text-slate-400 mb-5">
                 The balance of overall emotional tones across all processed confessions
               </p>
-              
               {sentimentPieData.length > 0 ? (
                 <div className="h-64 w-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height={240}>
@@ -329,28 +422,16 @@ export default function AnalyticsDashboard() {
                         data={aspectFrequency.sort((a, b) => b.count - a.count)}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60} 
+                        innerRadius={60}
                         outerRadius={80}
                         paddingAngle={2}
                         dataKey="count"
                         nameKey="term"
                       >
-                        {aspectFrequency
-                        .sort((a, b) => b.count - a.count)
-                        .map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            // You can define a custom array of hex codes here:
-                            fill={[
-                              '#004687', // Primary Brand Color
-                              '#f87171', 
-                              '#10b981', 
-                              '#f59e0b', 
-                              '#8b5cf6', 
-                              '#ec4899', 
-                              '#06b6d4',
-                              '#64748b'
-                            ][index % 8]} 
+                        {aspectFrequency.sort((a, b) => b.count - a.count).map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={['#004687','#f87171','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'][index % 8]}
                           />
                         ))}
                       </Pie>
@@ -364,52 +445,39 @@ export default function AnalyticsDashboard() {
               )}
             </div>
 
-            {/* Analytics Snapshot - Large Grid Layout */}
+            {/* Analytics Snapshot */}
             <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
               <h2 className="text-lg font-semibold text-slate-900 mb-1">Analytics snapshot</h2>
               <p className="text-xs text-slate-400 mb-6">
                 Real-time pulse of campus climate and student feedback trends
               </p>
-              
-              {/* Changed grid-cols-4 to grid-cols-2 for larger cards */}
               <div className="grid gap-4 sm:grid-cols-2">
-                
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5"
-                  title="This is the #1 topic students are currently complaining about. It is the biggest threat to campus morale right now."
-                >
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5" title="This is the #1 topic students are currently complaining about.">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Primary risk</p>
                   <p className="mt-2 text-md font-semibold text-slate-900 capitalize">
-                    {analytics?.primary_risk_driver?.driver ? ASPECT_LABELS[analytics.primary_risk_driver.driver] : "N/A"}
+                    {analytics?.primary_risk_driver?.driver
+                      ? ASPECT_LABELS[analytics.primary_risk_driver.driver] || analytics.primary_risk_driver.driver
+                      : "Not enough data to determine"}
                   </p>
                 </div>
-                
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5"
-                  title="This tells us if student mood is consistent or 'all over the place.' Unstable means there is a lot of recent confusion or conflict."
-                >
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5" title="Unstable means there is a lot of recent confusion or conflict.">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stability</p>
                   <p className="mt-2 text-md font-semibold text-slate-900 capitalize">
                     {analytics?.sentiment_volatility?.stability?.replace(/_/g, " ") || "N/A"}
                   </p>
                 </div>
-
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5"
-                  title="This measures the 'speed' of change. A negative number means negativity is spreading or intensifying faster than usual."
-                >
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5" title="A negative number means negativity is spreading faster than usual.">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Velocity</p>
                   <p className="mt-2 text-2xl font-black text-slate-900">
                     {analytics.sentiment_velocity.velocity.toFixed(3)}
                   </p>
                 </div>
-
-                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5"
-                  title="This shows if students agree. High percentage means everyone feels the same way. Low percentage means students are divided and arguing."
-                >
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5" title="High percentage means everyone feels the same way.">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consensus</p>
                   <p className="mt-2 text-2xl font-black text-slate-900">
                     {Math.round(analytics.consensus_score * 100)}%
                   </p>
                 </div>
-                
               </div>
             </div>
 

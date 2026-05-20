@@ -72,18 +72,6 @@ def _get_adaptive_positive_threshold(sample_size, min_required):
 
 
 def get_primary_risk_driver(aspect_summary, aspect_trends, review_count):
-    """ 
-    Identifies the aspect currently contributing the most business risk. 
-    
-    Signals used: 
-    - Negativity: lower sentiment = higher risk 
-    - Frequency: more mentions = higher importance 
-    - Trend: declining aspects increase risk 
-    
-    NOTE: Confidence is moved to metadata (data quality indicator only).
-    Score is scaled by confidence_factor to prevent over-interpretation of early-stage data.
-    """
-
     config = PRIMARY_RISK_DRIVER_CONFIG
     min_required = config["reliability"]["min_aspect_mentions"]
 
@@ -93,51 +81,36 @@ def get_primary_risk_driver(aspect_summary, aspect_trends, review_count):
             "driver": None,
             "impact": None,
             "score": 0,
-            "meta": reliability(
-                sample_size=0,
-                minimum=min_required
-            )
+            "meta": reliability(sample_size=0, minimum=min_required)
         }
 
-    weights = config["weights"]
     trend_map = config["trend"]["mapping"]
-
-    risk_scores = {}
     total_mentions = sum(a.get("count", 0) for a in aspect_summary.values())
     confidence_factor = _get_confidence_factor(total_mentions, min_required)
 
+    risk_scores = {}
+
     for aspect, data in aspect_summary.items():
-        avg_score = data.get("avg_score", 0.5)
-        count = data.get("count", 0)
+        avg_score = data.get("avg_score", 0)
 
-        # 1. Negativity (higher = worse)
-        negativity_score = 1 - avg_score
+        # Convert from -1..1 scale to 0..1, then get negativity
+        normalized = (avg_score + 1) / 2  # -1 → 0, 0 → 0.5, 1 → 1
+        negativity_score = 1 - normalized  # lower sentiment = higher risk
 
-        # 2. Frequency (importance signal)
-        frequency_score = min(
-            count / config["frequency"]["half_saturation_mentions"],
-            1
-        )
-
-        # 3. Trend (normalized symmetric: improving -1.0, stable 0, declining 1.0)
-        trend_label = aspect_trends.get(aspect, {}).get("trend", "insufficient_data")
+        trend_label = aspect_trends.get(aspect, {}).get("trend", "stable")
         trend_score = trend_map.get(trend_label, 0)
 
-        # FINAL SCORE (weights now exclude confidence)
         raw_score = (
-            negativity_score * weights["negativity"] +
-            frequency_score * weights["frequency"] +
-            trend_score * weights["trend"]
+            negativity_score * 0.70 +
+            trend_score * 0.30
         ) * 100
 
-        # Apply confidence factor: early-stage data gets scaled down
         adjusted_score = raw_score * confidence_factor
         risk_scores[aspect] = max(0, min(100, adjusted_score))
 
     driver = max(risk_scores, key=risk_scores.get)
     top_score = risk_scores[driver]
 
-    # Adaptive thresholds based on sample size
     adaptive_high = _get_adaptive_risk_threshold(total_mentions, min_required)
     adaptive_medium = config["thresholds"]["medium_impact_base"]
 
@@ -153,10 +126,7 @@ def get_primary_risk_driver(aspect_summary, aspect_trends, review_count):
         "driver": driver,
         "impact": impact,
         "score": round(top_score, 2),
-        "meta": reliability(
-            sample_size=total_mentions,
-            minimum=min_required
-        )
+        "meta": reliability(sample_size=total_mentions, minimum=min_required)
     }
 
 

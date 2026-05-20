@@ -1,6 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../components/auth/AuthContext";
 import WaveBackground from "../components/WaveBackground";
+import { IconUpload, IconChartBar, IconLayoutDashboard } from "@tabler/icons-react";
 
 export default function Home() {
   const { user } = useAuth();
@@ -35,10 +36,10 @@ export default function Home() {
             Admin portal
           </span>
           <h1 className="mt-8 text-5xl font-semibold tracking-tight sm:text-6xl">
-            Centralized confession ingestion and analytics for admins
+            Understand what students are saying, all in one place
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
-            Securely manage bulk confession imports, monitor sentiment analytics, and keep your dataset current from one admin interface.
+            VibeCheck collects anonymous student confessions and turns them into clear, actionable insights. Import data, track sentiment trends, and spot emerging concerns before they escalate.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -54,9 +55,10 @@ export default function Home() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20">
-            <h2 className="text-xl font-semibold text-white">Import Confessions</h2>
+            <IconUpload size={20} color="#60a5fa" />
+            <h2 className="mt-3 text-xl font-semibold text-white">Import confessions</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Use the admin dashboard to upload JSON confession batches and keep analytics fresh.
+              Upload confession batches in JSON format. The system processes and analyzes each entry automatically.
             </p>
             <Link
               to={importLink}
@@ -65,10 +67,12 @@ export default function Home() {
               {isAuthenticated ? "Open import panel" : "Sign in to import"}
             </Link>
           </div>
+
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20">
-            <h2 className="text-xl font-semibold text-white">View Analytics</h2>
+            <IconChartBar size={20} color="#34d399" />
+            <h2 className="mt-3 text-xl font-semibold text-white">View analytics</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Review sentiment, vibe score, and risk metrics in the dashboard once authenticated.
+              Explore sentiment scores, vibe trends, and aspect breakdowns across 8 campus categories.
             </p>
             <Link
               to={analyticsLink}
@@ -77,16 +81,18 @@ export default function Home() {
               {isAuthenticated ? "Open analytics" : "Sign in to view"}
             </Link>
           </div>
+
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20">
-            <h2 className="text-xl font-semibold text-white">Admin dashboard</h2>
+            <IconLayoutDashboard size={20} color="#fb923c" />
+            <h2 className="mt-3 text-xl font-semibold text-white">Spot risk signals</h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              This interface is designed for authenticated admins to manage confession ingestion and analytics in one place.
+              Get flagged when sentiment in areas like mental health or faculty behavior starts declining.
             </p>
             <Link
               to={dashboardLink}
               className="mt-6 inline-flex rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100 transition"
             >
-              {isAuthenticated ? "Go to dashboard" : "Sign in now"}
+              {isAuthenticated ? "Go to dashboard" : "Sign in to monitor"}
             </Link>
           </div>
         </div>

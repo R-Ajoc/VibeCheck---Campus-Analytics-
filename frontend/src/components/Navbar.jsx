@@ -6,6 +6,7 @@ import Logout from "./icons/Logout";
 import UserAvatar from "./UserAvatar";
 import vibecheck_logo from '../assets/vibecheck_logo.png';
 import { Home } from "lucide-react";
+import { IconLayoutDashboard } from "@tabler/icons-react";
 
 function Navbar() {
   const location = useLocation();
@@ -26,9 +27,8 @@ function Navbar() {
 
   return (
     <>
-      {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 w-full flex items-center justify-between px-6 md:px-12 py-4 bg-white border-b border-gray-100 shadow-sm z-50">
-        {/* LEFT: Brand - route to admin when authenticated to avoid showing public landing to signed-in users */}
+        {/* LEFT: Brand */}
         <Link to={isAuthenticated ? "/admin" : "/"} className="flex items-center gap-2 text-2xl font-bold text-[#004687] hover:opacity-80 transition">
           <img src={vibecheck_logo} alt="VibeCheck Logo" className="w-9 h-9" />
           VibeCheck
@@ -44,7 +44,8 @@ function Navbar() {
           )}
           {isAdmin && (
             <Link to="/admin" className={navLinkClass(location.pathname === "/admin")}>
-              Admin Dashboard
+              <IconLayoutDashboard size={18} />
+              Admin dashboard
             </Link>
           )}
         </div>
@@ -86,7 +87,6 @@ function Navbar() {
         </div>
       </nav>
 
-      {/* Spacer to prevent content overlap */}
       <div className="h-16" />
     </>
   );

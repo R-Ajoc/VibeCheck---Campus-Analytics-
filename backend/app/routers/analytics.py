@@ -173,3 +173,30 @@ async def get_analytics(
         "aspects": aspects,
     }
 
+@router.get("/timeline")
+async def get_sentiment_timeline(
+    group_by: str = "month",
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(auth_service.get_authenticated_user),
+):
+    result = await db.execute(select(Confession))
+    confessions = result.scalars().all()
+
+    grouped = {}
+    for c in confessions:
+        if not c.post_date:
+            continue
+        if group_by == "year":
+            key = str(c.post_date.year)
+        else:
+            key = c.post_date.strftime("%Y-%m")
+
+        if key not in grouped:
+            grouped[key] = {"period": key, "positive": 0, "negative": 0, "neutral": 0, "total": 0}
+
+        label = c.sentiment_label or "neutral"
+        grouped[key][label] += 1
+        grouped[key]["total"] += 1
+
+    timeline = sorted(grouped.values(), key=lambda x: x["period"])
+    return {"group_by": group_by, "timeline": timeline}
