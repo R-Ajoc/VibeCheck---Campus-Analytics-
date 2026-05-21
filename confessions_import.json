@@ -1,0 +1,23 @@
+[
+  { "content": "The cafeteria food has improved a lot this semester. The meals are fresher and the portions are bigger. Staff are also friendlier now.", "source": "scraped", "post_date": "2026-05-18T14:30:00Z" },
+  { "content": "I love the campus ambience but the workload this semester is overwhelming. Professors are helpful but scheduling leaves little time to rest.", "source": "scraped", "post_date": "2026-05-17T09:15:00Z" },
+  { "content": "The library is always too crowded and hard to find a seat. Cleanliness is okay but the smell near the restrooms is terrible.", "source": "imported", "post_date": "2026-05-16T20:00:00Z" },
+  { "content": "Registration service is extremely slow. I waited in queue for two hours just to get my documents processed. Very inefficient.", "source": "scraped", "post_date": "2026-05-15T11:00:00Z" },
+  { "content": "The campus atmosphere is peaceful and relaxing. I enjoy studying outdoors. The garden area near the science building is really beautiful.", "source": "scraped", "post_date": "2026-05-14T08:45:00Z" },
+  { "content": "Tuition fees keep increasing but the facilities are not improving. The price we pay should match the quality of experience we get.", "source": "imported", "post_date": "2026-05-13T16:20:00Z" },
+  { "content": "Some professors are really professional and helpful. Others are rude and unprofessional. It really depends on who you get.", "source": "scraped", "post_date": "2026-05-12T10:00:00Z" },
+  { "content": "The cafeteria meals are getting worse. Food is bland and sometimes undercooked. For the price we pay it should taste better.", "source": "scraped", "post_date": "2026-04-28T12:00:00Z" },
+  { "content": "Overall my experience this semester has been positive. Classes are engaging and the staff in the admin office are always courteous and prompt.", "source": "imported", "post_date": "2026-04-20T09:30:00Z" },
+  { "content": "The campus location is inconvenient. Transport access is poor and the shuttle schedule is unreliable. Hard to reach during peak hours.", "source": "scraped", "post_date": "2026-04-15T17:00:00Z" },
+  { "content": "Hygiene in the comfort rooms is really poor. They are rarely cleaned and always smell bad. This needs urgent attention from management.", "source": "scraped", "post_date": "2026-04-10T14:00:00Z" },
+  { "content": "I had a great experience attending the school fair. The atmosphere was lively and the food stalls had delicious and affordable meals.", "source": "imported", "post_date": "2026-04-05T10:00:00Z" },
+  { "content": "The waiting time for guidance office service is way too long. The staff are polite but the process is slow and needs improvement.", "source": "scraped", "post_date": "2026-03-25T11:30:00Z" },
+  { "content": "Campus is clean and well-maintained overall. The grounds crew does a great job keeping everything spotless and the restrooms are decent.", "source": "scraped", "post_date": "2026-03-18T08:00:00Z" },
+  { "content": "Scholarship fees and miscellaneous charges are not transparent. Hidden charges keep appearing in the billing statement. Very frustrating.", "source": "imported", "post_date": "2026-03-10T15:45:00Z" },
+  { "content": "The overall student experience is declining. Facilities are aging, food quality dropped, and staff responsiveness has gotten worse.", "source": "scraped", "post_date": "2026-03-05T13:00:00Z" },
+  { "content": "The new canteen renovation was worth it. Food choices are more varied, the area is clean, and the ambience is much more comfortable to eat in.", "source": "scraped", "post_date": "2026-02-20T12:30:00Z" },
+  { "content": "Professors this semester are very knowledgeable and professional. They respond quickly to messages and are genuinely helpful to students.", "source": "imported", "post_date": "2026-02-14T09:00:00Z" },
+  { "content": "The campus vibe this semester feels off. Too much academic pressure and not enough support from staff. Mental health resources are lacking.", "source": "scraped", "post_date": "2026-02-07T19:00:00Z" },
+  { "content": "Service at the registrar has improved drastically. Staff are now more attentive and the queue system is faster and more organized.", "source": "scraped", "post_date": "2026-01-22T10:15:00Z" },
+  { "content": "The start of semester experience was rough. Enrollment was chaotic, food options were limited, and the campus felt disorganized overall.", "source": "imported", "post_date": "2026-01-10T08:30:00Z" }
+]
