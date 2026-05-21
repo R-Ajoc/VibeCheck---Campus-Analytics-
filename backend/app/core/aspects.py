@@ -36,6 +36,14 @@ ASPECTS = {
         "shuttle transit transport bus ride commute parking driver timing route morning "
         "canteen cafeteria food options meals drink lunch breakfast table stall vendors line price"
     ),
+    "Love Life": (
+        "crush like love feelings confession confess shoutout shout-out admire admiring "
+        "admiration heart heartbreak heartbroken relationship boyfriend girlfriend partner "
+        "date dating flirt flirting kilig iniisip miss missing someone special "
+        "friendzone friend zone one-sided unrequited feelings mutual courting court "
+        "ligaw ligawan mahal gusto naliliit butterflies jealous jealousy sweet "
+        "hugot move on moving on breakup broke up ex lover situationship talking stage"
+    ),
 }
 
 # This safely maps them out while processing text tokens seamlessly

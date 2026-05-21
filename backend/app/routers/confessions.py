@@ -35,28 +35,32 @@ async def import_confessions(
 ):
     objs = await confession_service.bulk_import_confessions(db, items)
 
-    # schedule ABSA processing in background
     models = request.app.state.models
 
     async def _process_imported(confession_ids: list[int]):
+        import logging
         async with AsyncSessionLocal() as session:
+            processed = 0
+            skipped = 0
             for cid in confession_ids:
                 try:
                     conf = await confession_service.get_confession_or_404(session, cid)
                     await absa_service.run_absa_for_confession(session, conf, models)
                     await session.commit()
-                except Exception:
-                    # swallow errors for background processing; they will be logged by server
-                    pass
+                    processed += 1
+                except Exception as e:
+                    skipped += 1
+                    logging.warning(f"ABSA failed for confession {cid}: {e}")
+
+            logging.info(f"ABSA complete: {processed} processed, {skipped} skipped")
 
             if confession_ids:
                 try:
                     now = datetime.datetime.now(datetime.timezone.utc)
                     await create_vibe_snapshot(session, models, now, use_ai_summary=False)
                     await session.commit()
-                except Exception:
-                    # snapshot creation can fail without breaking the import workflow
-                    pass
+                except Exception as e:
+                    logging.warning(f"Snapshot failed: {e}")
 
     confession_ids = [o.id for o in objs]
     asyncio.create_task(_process_imported(confession_ids))

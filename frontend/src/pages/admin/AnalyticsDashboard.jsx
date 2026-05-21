@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAnalytics, getSentimentTimeline } from "../../services/api";
+import { getAnalytics, getSentimentTimeline, getUnprocessed } from "../../services/api";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis as XAxis2, YAxis as YAxis2,
 } from "recharts";
 
 const ASPECT_LABELS = {
@@ -21,6 +22,7 @@ const ASPECT_LABELS = {
   enrollment: "Pre-Enrollment & Admin",
   experience: "Student Experience",
   ambience: "Campus Atmosphere",
+  love_life: "Love Life",
 };
 
 const TREND_ICONS = {
@@ -50,7 +52,7 @@ function ScoreBar({ score }) {
 function SentimentBadge({ score }) {
   if (score > 0.2) return <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Positive</span>;
   if (score < -0.2) return <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Negative</span>;
-  return <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Neutral</span>;
+  return null;
 }
 
 function AspectBar({ term, count, maxCount }) {
@@ -171,6 +173,20 @@ export default function AnalyticsDashboard() {
     },
   ];
 
+  const [unprocessed, setUnprocessed] = useState(null);
+
+  useEffect(() => {
+    const fetchUnprocessed = async () => {
+      try {
+        const data = await getUnprocessed();
+        setUnprocessed(data);
+      } catch {
+        setUnprocessed(null);
+      }
+    };
+    fetchUnprocessed();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 py-10">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
@@ -213,6 +229,32 @@ export default function AnalyticsDashboard() {
                 </div>
               ))}
             </div>
+
+            {unprocessed && unprocessed.unprocessed > 0 && (
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm col-span-full">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-2" />
+                  <div>
+                    <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">
+                      Unprocessed confessions
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold text-amber-900">
+                      {unprocessed.unprocessed} of {unprocessed.total}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-700">
+                      These confessions were stored but not analyzed — likely because they contain no campus-related keywords.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {unprocessed.likely_reasons.map((reason, i) => (
+                        <span key={i} className="text-xs bg-amber-100 border border-amber-200 text-amber-700 px-2 py-1 rounded-full">
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Sentiment Timeline Chart */}
             <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
@@ -390,74 +432,136 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
 
-            {/* Sentiment Distribution Pie Chart */}
-            <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-900 mb-1">Sentiment distribution</h2>
-              <p className="text-xs text-slate-400 mb-5">
-                The balance of overall emotional tones across all processed confessions
-              </p>
-              {sentimentPieData.length > 0 ? (
-                <div className="h-64 w-full flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={sentimentPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                        nameKey="name"
-                      >
-                        {sentimentPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0' }} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 py-10 text-center">No sentiment distribution data found.</p>
-              )}
+            {/* Donut Charts Side by Side */}
+            <div className="grid gap-4 lg:grid-cols-2">
+
+              {/* Sentiment Distribution */}
+              <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">Sentiment distribution</h2>
+                <p className="text-xs text-slate-400 mb-5">
+                  Overall emotional tone across all processed confessions
+                </p>
+                {sentimentPieData.length > 0 ? (
+                  <div className="h-56 w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={sentimentPieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={75}
+                          paddingAngle={5}
+                          dataKey="value"
+                          nameKey="name"
+                        >
+                          {sentimentPieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0' }} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 py-10 text-center">No sentiment distribution data found.</p>
+                )}
+              </div>
+
+              {/* Most Mentioned Topics */}
+              <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">Most mentioned topics</h2>
+                <p className="text-xs text-slate-400 mb-5">
+                  How often each aspect appears across all imported confessions
+                </p>
+                {aspectFrequency.length > 0 ? (
+                  <div className="h-56 w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={aspectFrequency.sort((a, b) => b.count - a.count)}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={55}
+                          outerRadius={75}
+                          paddingAngle={2}
+                          dataKey="count"
+                          nameKey="term"
+                        >
+                          {aspectFrequency.sort((a, b) => b.count - a.count).map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={['#004687','#f87171','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b','#f43f5e'][index % 9]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No data detected.</p>
+                )}
+              </div>
             </div>
 
-            {/* Most mentioned aspects */}
+            {/* Aspect Sentiment Breakdown */}
             <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-900 mb-1">Most mentioned topics</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-1">Aspect sentiment breakdown</h2>
               <p className="text-xs text-slate-400 mb-5">
-                How often each aspect appears across all imported confessions
+                Percentages represent the sentiment polarity density of collected public mentions for each aspect.
               </p>
-              {aspectFrequency.length > 0 ? (
-                <div className="h-64 w-full flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart>
-                      <Pie
-                        data={aspectFrequency.sort((a, b) => b.count - a.count)}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={2}
-                        dataKey="count"
-                        nameKey="term"
-                      >
-                        {aspectFrequency.sort((a, b) => b.count - a.count).map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={['#004687','#f87171','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'][index % 8]}
-                          />
+
+              {aspects.length > 0 ? (() => {
+                // Process data to be all positive values for left-alignment
+                const chartData = [...aspects]
+                  .filter((a, index, self) => index === self.findIndex((b) => b.name === a.name))
+                  .filter((a) => Math.abs(a.score) > 0.2)
+                  .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+                  .map(a => ({
+                    name: ASPECT_LABELS[a.name] || a.name,
+                    percentage: Math.round(Math.abs(a.score) * 100),
+                    label: a.score > 0 ? "Positive" : "Negative",
+                    barValue: Math.abs(a.score), // Used for width
+                    fill: a.score > 0 ? '#10b981' : '#f87171',
+                  }));
+
+                return (
+                  <ResponsiveContainer width="100%" height={chartData.length * 48}>
+                    <BarChart
+                      data={chartData}
+                      layout="vertical"
+                      margin={{ top: 0, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <XAxis type="number" domain={[0, 1]} hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        tick={{ fontSize: 13, fill: '#64748b' }}
+                        width={140}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', fontSize: '12px' }}
+                        formatter={(value, name, props) => [
+                          `${props.payload.percentage}% ${props.payload.label.toLowerCase()}`,
+                          'Sentiment'
+                        ]}
+                      />
+                      <Bar dataKey="barValue" radius={[0, 4, 4, 0]} barSize={24}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend layout="vertical" align="right" verticalAlign="middle" iconType="circle" />
-                    </PieChart>
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">No data detected.</p>
+                );
+              })() : (
+                <p className="text-sm text-slate-400">No aspect data available.</p>
               )}
             </div>
 
@@ -492,6 +596,15 @@ export default function AnalyticsDashboard() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consensus</p>
                   <p className="mt-2 text-2xl font-black text-slate-900">
                     {Math.round(analytics.consensus_score * 100)}%
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {analytics.consensus_score < 0.25
+                      ? "Students are widely divided in sentiment"
+                      : analytics.consensus_score < 0.5
+                      ? "Some agreement but opinions vary"
+                      : analytics.consensus_score < 0.75
+                      ? "Moderate agreement among students"
+                      : "Students largely agree in sentiment"}
                   </p>
                 </div>
               </div>

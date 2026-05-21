@@ -88,3 +88,11 @@ export const getSentimentTimeline = async (groupBy = "month") => {
   });
   return response.data;
 };
+
+export const getUnprocessed = async () => {
+  const token = localStorage.getItem("token");
+  const response = await axios.get(`/api/analytics/unprocessed`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};

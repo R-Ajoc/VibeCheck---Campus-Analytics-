@@ -213,3 +213,30 @@ async def get_sentiment_timeline(
 
     timeline = sorted(grouped.values(), key=lambda x: x["period"])
     return {"group_by": group_by, "timeline": timeline}
+
+@router.get("/unprocessed")
+async def get_unprocessed_confessions(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(auth_service.get_authenticated_user),
+):
+    total_result = await db.execute(select(func.count(Confession.id)))
+    total = total_result.scalar() or 0
+
+    processed_result = await db.execute(
+        select(func.count(Confession.id)).where(
+            Confession.sentiment_score.isnot(None)
+        )
+    )
+    processed = processed_result.scalar() or 0
+    unprocessed = total - processed
+
+    return {
+        "total": total,
+        "processed": processed,
+        "unprocessed": unprocessed,
+        "likely_reasons": [
+            "No matching aspect keywords found in confession",
+            "Confession may be a shoutout, buy/sell post, or group chat request",
+            "Content too short or unrelated to campus concerns",
+        ]
+    }

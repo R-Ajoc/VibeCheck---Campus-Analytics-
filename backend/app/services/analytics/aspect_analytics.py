@@ -24,6 +24,7 @@ ASPECT_NAME_MAP = {
     "mental_health": "Student Mental Health",
     "cost": "Tuition & Costs",
     "services_transit": "Transit & Services",
+    "love_life": "Love Life",
 }
 
 async def get_aspect_summary(db: AsyncSession):

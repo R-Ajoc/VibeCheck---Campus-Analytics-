@@ -68,11 +68,11 @@ MINIMUM_REVIEW_COUNT = 3
 # --------------------------
 
 # used in ABSA to determine if a sentence is relevant to an aspect
-SIMILARITY_THRESHOLD = 0.35 
+SIMILARITY_THRESHOLD = 0.30 
 
 # used in ABSA to filter out low-confidence sentiment predictions, 
 # which can help improve overall aspect sentiment accuracy
-MIN_SENTIMENT_CONFIDENCE = 0.6
+MIN_SENTIMENT_CONFIDENCE = 0.5
 
 # minimum number of characters for a clause to be considered valid
 MIN_CLAUSE_LENGTH = 8 

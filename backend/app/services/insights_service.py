@@ -549,5 +549,5 @@ def get_consensus_score(scores):
     
     stdev = statistics.stdev(scores)
     # Higher consensus (1.0) means lower variance; low consensus (0.0) means high variance
-    consensus = max(0, 1 - (stdev * 2)) 
+    consensus = max(0, 1 - stdev) 
     return round(consensus, 2)

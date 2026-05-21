@@ -264,4 +264,15 @@ async def run_absa_for_confession(
         confession.sentiment_label = dominant_label
         db.add(confession)
 
+    # Even if no aspect matched, save overall sentiment so confession is counted as processed
+    if not results and sentences:
+        full_text = " ".join(sentences[:3])
+        sentiment_score, sentiment_label, sentiment_confidence = analyze_sentiment(
+            full_text, models.sentiment
+        )
+        if sentiment_confidence >= MIN_SENTIMENT_CONFIDENCE:
+            confession.sentiment_score = sentiment_score
+            confession.sentiment_label = sentiment_label
+            db.add(confession)
+
     return results
